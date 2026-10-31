@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>HATASIM-Airship · Tether Aerostat Simulation Tool</title>
+    <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Roboto", sans-serif; }
+        body { background: #f1f5f9; color: #0f172a; overflow: hidden; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 8px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; }
+        .app-container { display: flex; flex-direction: column; height: 100vh; }
+        .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; z-index: 10; background: white; border-bottom: 1px solid #e2e8f0; padding: 0.4rem 1.5rem; }
+        .title { display: flex; align-items: center; gap: 22px; }
+        .title h1 { font-size: 1.25rem; font-weight: 700; }
+        .help-btn { cursor: pointer; transition: all 0.2s; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 32px; padding: 4px 14px; font-weight: 600; font-size: 0.7rem; color: #1e293b; }
+        .help-btn:hover { background: #e2e8f0; border-color: #94a3b8; }
+        .author-info { background: #f1f5f9; border-radius: 25px; padding: 0.25rem 1rem; font-size: 0.8rem; font-weight: 500; }
+        .version { background: #f1f5f9; border-radius: 20px; padding: 0.3rem 1rem; font-size: 0.8rem; }
+        .main-dashboard { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 320px; background: #ffffff; border-right: 1px solid #e2e8f0; overflow-y: auto; padding: 0.7rem 0.9rem; }
+        .param-group { background: #f8fafc; border-radius: 16px; border: 1px solid #eef2ff; margin-bottom: 0.56rem; padding: 0.5rem 0.8rem 0.2rem; }
+        .param-group.red h3 { color: #dc2626; }
+        .param-group.blue h3 { color: #2563eb; }
+        .param-group h3 { font-size: 0.78rem; font-weight: 700; margin-bottom: 0.6rem; }
+        .param-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .param-row label { flex: 1; font-size: 0.7rem; font-weight: 600; color: #1e293b; }
+        .number-input, .text-input { flex: none; width: 128px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 8px; font-size: 0.7rem; text-align: left; outline: none; font-weight: 500; }
+        .number-input:focus, .text-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15); }
+        #queryHeight:focus, .param-selector select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15); outline: none; }
+        .dashed-sep { border-top: 1px dashed #94a3b8; margin: 8px 0 8px 0; }
+        .collapsible { margin-top: 2px; padding-top: 10px; }
+        .collapse-header { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 600; margin-bottom: 10px; }
+        .collapse-content { display: none; padding-left: 2px; margin-top: 4px; }
+        .collapse-content.show { display: block; }
+        .chart-panel { display: flex; flex-direction: column; flex: 1; gap: 0.6rem; overflow: hidden; background: #f1f5f9; padding: 0.6rem 0.88rem; }
+        .control-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; flex-shrink: 0; background: white; border: 1px solid #e9eef3; border-radius: 25px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); padding: 0.33rem 1rem; }
+        .ctrl-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .solution-selector { display: flex; gap: 6px; flex-wrap: wrap; background: #f1f5f9; border-radius: 24px; margin: 0 auto; padding: 2px 12px; }
+        .sol-btn { cursor: pointer; transition: 0.1s; background: #e2e8f0; border: none; border-radius: 16px; padding: 4px 12px; font-size: 0.72rem; font-weight: 600; color: #1e293b; }
+        .sol-btn.active { background: #2563eb; color: white; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+        .query-input-group { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; background: #f8fafc; border-radius: 40px; padding: 0 12px; }
+        .query-input-group span { font-size: 0.75rem; font-weight: 500; }
+        .query-input-group input { border: 1px solid #cbd5e1; border-radius: 25px; padding: 4px 8px; width: 80px; font-size: 0.7rem; transition: all 0.2s; font-weight: 500; }
+        button { cursor: pointer; transition: all 0.2s; background: #1e293b; border: none; border-radius: 32px; padding: 6px 18px; font-weight: 600; font-size: 0.75rem; color: white; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        button.primary { background: #2563eb; }
+        button.primary:hover { background: #1d4ed8; }
+        button.reset-btn { background: #ea580c; }
+        button.reset-btn:hover { background: #c2410c; }
+        button.query-btn { background: #10b981; }
+        button.query-btn:hover { background: #059669; }
+        button.green { background: #10b981; }
+        .grid-dashboard { display: grid; grid-template-rows: 1fr 1fr; grid-template-columns: 1fr 1fr; gap: 0.6rem; flex: 1; min-height: 0; }
+        .grid-card { display: flex; flex-direction: column; overflow: hidden; background: white; border: 1px solid #eef2ff; border-radius: 20px; padding: 0.6rem; }
+        .grid-card .chart-title { flex-shrink: 0; font-weight: 600; font-size: 0.75rem; margin-bottom: 0.5rem; margin-left: 12px; }
+        .plot-container { flex: 1; min-height: 0; width: 100%; }
+        .result-stack { display: flex; flex-direction: column; flex: 1; gap: 0.5rem; overflow-y: auto; }
+        .result-row { background: #f8fafc; border: 1px solid #eef2ff; border-radius: 16px; padding: 0.05rem; }
+        .result-inner { display: flex; gap: 8px; height: 100%; }
+        .vertical-title { flex-shrink: 0; background: #f1f5f9; border-right: 1px solid #e2e8f0; border-radius: 12px; padding: 4px 2px; font-weight: 600; font-size: 0.6rem; text-align: center; letter-spacing: 1px; writing-mode: vertical-lr; text-orientation: upright; color: #1e293b; }
+        .result-cols { display: grid; grid-template-columns: 0.925fr 0.925fr 1.05fr 1.1fr; gap: 0.5rem; flex: 1; }
+        .result-col { background: white; border: 1px solid #e2e8f0; border-radius: 14px; padding: 0.3rem 0.6rem; }
+        .result-col strong { display: block; border-bottom: 1px dashed #94a3b8; margin-bottom: 0.32rem; padding-bottom: 0.25rem; font-size: 0.68rem; font-weight: 600; }
+        .result-col p { margin: 0.2rem 0.1rem; font-size: 0.62rem; line-height: 1.4; font-weight: 400; }
+        .param-selector { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; flex-shrink: 0; background: #f8fafc; border-radius: 16px; padding: 2px 14px; margin-bottom: 8px; font-size: 0.68rem; }
+        .param-selector select { cursor: pointer; transition: all 0.2s; border: 1px solid #cbd5e1; border-radius: 16px; padding: 4px 10px; font-size: 0.68rem; min-width: 140px; background: white; font-weight: 500; }
+        .param-selector select option { padding: 2px 6px; }
+        .param-selector span { white-space: nowrap; font-weight: 500; }
+        #trajPlot, #tensionPlot, #paramCurvePlot { height: 100%; width: 100%; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 9999; visibility: hidden; opacity: 0; transition: opacity 0.2s; background: rgba(0, 0, 0, 0.5); }
+        .modal-overlay.show { visibility: visible; opacity: 1; }
+        .modal-content { max-width: 720px; max-height: 80vh; overflow-y: auto; background: white; border-radius: 30px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); padding: 1.5rem 2rem; font-size: 1rem; line-height: 1.5; text-align: center; }
+        #modalOverlay .modal-content { font-size: 1.05rem; font-weight: 600; text-align: center; letter-spacing: 0.5px; }
+        .modal-content h4 { margin: 0.5rem 0 0.3rem; font-size: 0.85rem; text-align: left; }
+        .modal-content p { margin: 0.3rem 0; font-size: 0.85rem; text-align: left; }
+        .close-help { margin-top: 0.6rem; text-align: center; }
+        .close-help button { background: #2563eb; padding: 0.3rem 1rem; }
+        .stability-ok { color: #10b981; font-weight: 600; }
+        .stability-fail { color: #dc2626; font-weight: 600; }
+        .stability-value { font-weight: 600; }
+        .stability-label { font-weight: 500; }
+        .stability-divider { border-top: 1px dashed #94a3b8; margin: 6px 0; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <div class="title">
+            <h1>HATASIM-Airship</h1>
+            <button class="help-btn" id="helpBtn">📘 Help</button>
+        </div>
+        <div class="author-info">Author: Zhongwei Ni 丨 Supported by An-Group</div>
+        <div class="version">Version 1.3.20261031</div>
+    </div>
+    <div class="main-dashboard">
+        <div class="sidebar">
+            <div class="param-group red">
+                <h3>Aerostat Parameters</h3>
+                <div class="param-row"><label>Step size (m)</label><input type="number" class="number-input" id="step_h" value="" step="1"></div>
+                <div class="param-row"><label>Volume (m³)</label><input type="number" class="number-input" id="V_ast" value="109" step="10"></div>
+                <div class="param-row"><label>Reference length (m)</label><input type="number" class="number-input" id="L_ast" value="5" step="0.5"></div>
+                <div class="param-row"><label>Reference area (m²)</label><input type="number" class="number-input" id="S_ref" value="" step="10"></div>
+                <div class="param-row"><label>Envelope mass (kg)</label><input type="number" class="number-input" id="m_enve" value="100" step="5"></div>
+                <div class="param-row"><label>Payload mass (kg)</label><input type="number" class="number-input" id="m_load" value="10" step="5"></div>
+                <div class="param-row"><label>Buoyancy center x (m)</label><input type="number" class="number-input" id="x_CB" value="0.0" step="0.1"></div>
+                <div class="param-row"><label>Buoyancy center y (m)</label><input type="number" class="number-input" id="y_CB" value="0.0" step="0.1"></div>
+                <div class="dashed-sep"></div>
+                <div class="param-row"><label>Effective alpha range (°)</label>
+                    <div style="display: flex; gap: 4px; width: 128px;">
+                        <input type="number" id="alpha_min" value="-30" step="1" style="width:62px;" class="number-input">
+                        <input type="number" id="alpha_max" value="30" step="1" style="width:62px;" class="number-input">
+                    </div>
+                </div>
+                <div class="param-row"><label>Lift coefficient</label><input type="text" class="text-input" id="Cl_coeff" value="1.273,0" placeholder="polynomial coefficients"></div>
+                <div class="param-row"><label>Drag coefficient</label><input type="text" class="text-input" id="Cd_coeff" value="1.4235,-0.0134,0.0356" placeholder="polynomial coefficients"></div>
+                <div class="param-row"><label>Pitch moment coefficient</label><input type="text" class="text-input" id="Cm_coeff" value="11.333,-0.2994,-6.0303,0.0329,0.4971,-0.0012" placeholder="polynomial coefficients"></div>
+            </div>
+            <div class="param-group red">
+                <h3>Tether Parameters</h3>
+                <div class="param-row"><label>Segment length (m)</label><input type="number" class="number-input" id="L_seg" value="1" step="1"></div>
+                <div class="param-row"><label>Tether diameter (m)</label><input type="number" class="number-input" id="d_tet" value="0.004" step="0.001"></div>
+                <div class="param-row"><label>Tether density (kg/m³)</label><input type="number" class="number-input" id="rho_tet" value="970" step="10"></div>
+                <div class="param-row"><label>Elastic modulus (GPa)</label><input type="number" class="number-input" id="E_GPa" value="172" step="1"></div>
+                <div class="param-row"><label>Confluence point x (m)</label><input type="number" class="number-input" id="x_CP" value="0.0" step="0.1"></div>
+                <div class="param-row"><label>Confluence point y (m)</label><input type="number" class="number-input" id="y_CP" value="-4.0" step="0.1"></div>
+            </div>
+            <div class="param-group red">
+                <h3>Wind Field Parameters</h3>
+                <div class="param-row"><label>Reference wind speed (m/s)</label><input type="number" class="number-input" id="v_ref" value="2.0" step="1"></div>
+                <div class="param-row"><label>Reference height (m)</label><input type="number" class="number-input" id="h_ref" value="10.0" step="10"></div>
+                <div class="param-row"><label>Ground altitude (m)</label><input type="number" class="number-input" id="h_ground" value="0.0" step="10"></div>
+                <div class="param-row"><label>Wind shear exponent</label><input type="number" class="number-input" id="alpha_ws" value="0.143" step="0.01"></div>
+            </div>
+            <div class="param-group blue collapsible">
+                <div class="collapse-header" id="toggleAtmosBtn" style="color:#2563eb;">🌏 Atmospheric Parameters ▼</div>
+                <div class="collapse-content" id="atmosCollapse">
+                    <div class="param-row"><label>Earth radius (m)</label><input type="number" class="number-input" id="R_earth" value="6356766" step="1000"></div>
+                    <div class="param-row"><label>Gravity (m/s²)</label><input type="number" class="number-input" id="g0" value="9.80665" step="0.01"></div>
+                    <div class="param-row"><label>Sea level pressure (Pa)</label><input type="number" class="number-input" id="P0" value="101325" step="1000"></div>
+                    <div class="param-row"><label>Sea level temperature (K)</label><input type="number" class="number-input" id="T0" value="288.15" step="1"></div>
+                    <div class="param-row"><label>Lapse rate (K/m)</label><input type="number" class="number-input" id="gamma" value="0.0065" step="0.0005"></div>
+                    <div class="param-row"><label>Air gas constant</label><input type="number" class="number-input" id="R_air" value="287.05287" step="1"></div>
+                    <div class="param-row"><label>Helium gas constant</label><input type="number" class="number-input" id="R_He" value="2077.2298" step="1"></div>
+                    <div class="param-row"><label>Sutherland constant (K)</label><input type="number" class="number-input" id="S_suth" value="110.4" step="1"></div>
+                    <div class="param-row"><label>Sea level dynamic viscosity (Pa·s)</label><input type="number" class="number-input" id="mu0" value="0.000017894" step="1e-6"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-panel">
+            <div class="control-bar">
+                <div class="ctrl-buttons">
+                    <button class="primary" id="computeBtn">Run Simulation</button>
+                    <button class="reset-btn" id="resetBtn">Reset</button>
+                </div>
+                <div id="solutionSelectorContainer" class="solution-selector" style="display: flex;"></div>
+                <div class="query-input-group">
+                    <span id="queryLabel">🔍 Query altitude: ❗Not computed❗</span>
+                    <input type="number" id="queryHeight" placeholder="altitude (m)" step="1" value="100" style="width: 80px;">
+                    <button class="query-btn" id="queryBtn">Query</button>
+                </div>
+            </div>
+            <div class="grid-dashboard">
+                <div class="grid-card">
+                    <div class="chart-title">📊 Ascent Path &amp; Tether Shape</div>
+                    <div class="plot-container" id="trajPlot"></div>
+                </div>
+                <div class="grid-card">
+                    <div class="chart-title">📉 Tether Tension Distribution</div>
+                    <div class="plot-container" id="tensionPlot"></div>
+                </div>
+                <div class="grid-card">
+                    <div class="chart-title">📈 Parameter Relationship</div>
+                    <div class="param-selector">
+                        <span>X-axis:</span>
+                        <select id="xParamSelect"></select>
+                        <span>&nbsp;&nbsp;&nbsp;&nbsp;Y-axis:</span>
+                        <select id="yParamSelect"></select>
+                        <button id="updateParamPlot" class="green" style="background:#10b981;">Update Plot</button>
+                    </div>
+                    <div class="plot-container" id="paramCurvePlot"></div>
+                </div>
+                <div class="grid-card">
+                    <div class="result-stack" id="resultStack">
+                        <div class="result-row" id="finalResultRow">
+                            <div class="result-inner">
+                                <div class="vertical-title">📋Final Results</div>
+                                <div class="result-cols" id="finalResultCols">
+                                    <div class="result-col"><strong>🎈 Aerostat</strong><div id="finalAero"></div></div>
+                                    <div class="result-col"><strong>🪢 Tether</strong><div id="finalTether"></div></div>
+                                    <div class="result-col"><strong>🌏 Atmosphere</strong><div id="finalAtmos"></div></div>
+                                    <div class="result-col"><strong>⚖️ Static Stability</strong><div id="finalStability"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-row" id="queryResultRow">
+                            <div class="result-inner">
+                                <div class="vertical-title">🔍Query Results</div>
+                                <div class="result-cols" id="queryResultCols">
+                                    <div class="result-col"><strong>🎈 Aerostat</strong><div id="queryAero"></div></div>
+                                    <div class="result-col"><strong>🪢 Tether</strong><div id="queryTether"></div></div>
+                                    <div class="result-col"><strong>🌏 Atmosphere</strong><div id="queryAtmos"></div></div>
+                                    <div class="result-col"><strong>⚖️ Static Stability</strong><div id="queryStability"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modalOverlay" class="modal-overlay">
+    <div class="modal-content" id="modalMessage">Iterating solution...</div>
+</div>
+
+<div id="helpModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 640px;">
+        <h3 style="margin:0 0 12px 0;">📘 Tether Aerostat Simulation Tool Help</h3>
+        <div style="max-height: 50vh; overflow-y: auto; padding-right: 8px;">
+            <h4>1. General Usage:</h4>
+            <p> ① Run with a maximized window to avoid UI layout issues.<br>
+                ② Unexpected results are usually caused by unreasonable parameter settings; please check your inputs first.<br>
+                ③ For further communication, contact: nzw0322@163.com.</p>
+
+            <h4>2. Aerostat Parameters:</h4>
+            <p> ① Step size defaults to V^(1/3), does not affect final results but slightly impacts speed. Ensure it is greater than twice the tether segment length to avoid oscillations.<br>
+                ② Reference length is typically the hull length or V^(1/3) (default), can be customized for special shapes.<br>
+                ③ Reference area is typically the maximum cross-sectional area or V^(2/3) (default), can be customized.<br>
+                ④ Envelope mass is the total empty mass of the aerostat (excluding helium).<br>
+                ⑤ Coordinates are in the body-fixed frame, origin at the center of mass (default coincident with CG), X-axis points forward, Y-axis upward. Default buoyancy center coincides with CG.<br>
+                ⑥ Aerodynamic coefficients are polynomial coefficients from highest to lowest order, separated by commas.</p>
+
+            <h4>3. Tether Parameters:</h4>
+            <p> ① Segment length defaults to a function of volume, can be customized. Recommend keeping segment count between 500-1000. Too small may cause visualization issues, too large may affect accuracy.<br>
+                ② Attachment point coordinates in body frame. Default main attachment is below CG at a distance of the maximum diameter. Note the negative sign for y.</p>
+
+            <h4>4. Wind Field Parameters:</h4>
+            <p> ① Wind profile uses power law; reference speed is at reference height (typically 10 m above ground).<br>
+                ② Ground altitude is local altitude, default 0. If changed, adjust reference height and wind speed accordingly. Actual altitude = final altitude - ground altitude.<br>
+                ③ Wind shear exponent depends on terrain; smoother terrain gives smaller exponent, default 1/7. Set to 0 for uniform wind.</p>
+
+            <h4>5. Atmospheric Parameters:</h4>
+            <p>All these parameters are altitude-dependent and affect every iteration. The default ISA model is strongly recommended; modification is discouraged.</p>
+
+            <h4>6. Additional Notes:</h4>
+            <p>This HTML code originates from a MATLAB code. If issues arise, try the original MATLAB code with the same parameters to verify, then adjust accordingly.</p>
+        </div>
+        <div class="close-help">
+            <button id="closeHelpBtn">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentResults = null, currentParams = null, currentConst = null, currentCoeffs = null;
+    let availableSolutions = [];
+    let selectedSolutionIndex = 0;
+    let colorStressRange = { min: 0.1, max: 10 };
+    let isQuerying = false;
+
+    function getConstFromUI() {
+        return {
+            R_earth: parseFloat(document.getElementById('R_earth').value),
+            g0: parseFloat(document.getElementById('g0').value),
+            P0: parseFloat(document.getElementById('P0').value),
+            T0: parseFloat(document.getElementById('T0').value),
+            gamma: parseFloat(document.getElementById('gamma').value),
+            R_air: parseFloat(document.getElementById('R_air').value),
+            R_He: parseFloat(document.getElementById('R_He').value),
+            mu0: parseFloat(document.getElementById('mu0').value),
+            S_suth: parseFloat(document.getElementById('S_suth').value)
+        };
+    }
+
+    function getAeroCoeffs() {
+        const cl = document.getElementById('Cl_coeff').value.split(',').map(Number);
+        const cd = document.getElementById('Cd_coeff').value.split(',').map(Number);
+        const cm = document.getElementById('Cm_coeff').value.split(',').map(Number);
+        return { cl, cd, cm };
+    }
+
+    function polyval(coeffs, x) {
+        let val = 0;
+        for (let i = 0; i < coeffs.length; i++) val += coeffs[i] * Math.pow(x, coeffs.length - 1 - i);
+        return val;
+    }
+
+    function getParamsFromUI() {
+        const V = parseFloat(document.getElementById('V_ast').value);
+        return {
+            step_h: parseFloat(document.getElementById('step_h').value) || Math.pow(V, 1 / 3),
+            V_ast: V,
+            L_ast: parseFloat(document.getElementById('L_ast').value) || Math.pow(V, 1 / 3),
+            S_ref: parseFloat(document.getElementById('S_ref').value) || Math.pow(V, 2 / 3),
+            m_enve: parseFloat(document.getElementById('m_enve').value),
+            m_load: parseFloat(document.getElementById('m_load').value),
+            x_CB: parseFloat(document.getElementById('x_CB').value),
+            y_CB: parseFloat(document.getElementById('y_CB').value),
+
+            L_seg: parseFloat(document.getElementById('L_seg').value),
+            d_tet: parseFloat(document.getElementById('d_tet').value),
+            rho_tet: parseFloat(document.getElementById('rho_tet').value),
+            E: parseFloat(document.getElementById('E_GPa').value) * 1e9,
+            x_CP: parseFloat(document.getElementById('x_CP').value),
+            y_CP: parseFloat(document.getElementById('y_CP').value),
+
+            v_ref: parseFloat(document.getElementById('v_ref').value),
+            h_ref: parseFloat(document.getElementById('h_ref').value),
+            h_ground: parseFloat(document.getElementById('h_ground').value),
+            alpha_ws: parseFloat(document.getElementById('alpha_ws').value)
+        };
+    }
+
+    function ISA_params_custom(h, v_ref, h_ref, alpha_ws, c) {
+        const g = c.g0 * Math.pow(c.R_earth / (c.R_earth + h), 2);
+        const T = c.T0 - c.gamma * h;
+        const P = c.P0 * Math.pow(T / c.T0, g / (c.R_air * c.gamma));
+        const rho_air = P / (c.R_air * T);
+        const rho_He = P / (c.R_He * T);
+        const mu = c.mu0 * Math.pow(T / c.T0, 1.5) * (c.T0 + c.S_suth) / (T + c.S_suth);
+        const v = v_ref * Math.pow(Math.max(h, 0.01) / h_ref, alpha_ws);
+        return { g, T, P, rho_air, rho_He, mu, v };
+    }
+
+    function Aero_params_custom(rho_air, v, S_ref, L_ast, alpha, coeffs) {
+        const Cl = polyval(coeffs.cl, alpha);
+        const Cd = polyval(coeffs.cd, alpha);
+        const Cm = polyval(coeffs.cm, alpha);
+        return {
+            F_l: 0.5 * rho_air * v * v * S_ref * Cl,
+            F_d: 0.5 * rho_air * v * v * S_ref * Cd,
+            M_CG: 0.5 * rho_air * v * v * S_ref * Cm * L_ast
+        };
+    }
+
+    function moment_residual(alpha, rho_air, v, S_ref, L_ast, F_b, W_ast, x_CB, y_CB, x_CP, y_CP, coeffs) {
+        const { F_l, F_d, M_CG } = Aero_params_custom(rho_air, v, S_ref, L_ast, alpha, coeffs);
+        const x_CB_w = x_CB * Math.cos(alpha) - y_CB * Math.sin(alpha);
+        const x_CP_w = x_CP * Math.cos(alpha) - y_CP * Math.sin(alpha);
+        const y_CP_w = x_CP * Math.sin(alpha) + y_CP * Math.cos(alpha);
+        return M_CG + F_b * x_CB_w - (F_l + F_b - W_ast) * x_CP_w - F_d * y_CP_w;
+    }
+
+    function solve_alpha_newton(guess, rho_air, v, S_ref, L_ast, F_b, W_ast, x_CB, y_CB, x_CP, y_CP, coeffs) {
+        let alpha = guess;
+        for (let iter = 0; iter < 200; iter++) {
+            const res = moment_residual(alpha, rho_air, v, S_ref, L_ast, F_b, W_ast, x_CB, y_CB, x_CP, y_CP, coeffs);
+            if (Math.abs(res) < 1e-3) return alpha;
+            const eps = 1e-6;
+            const resP = moment_residual(alpha + eps, rho_air, v, S_ref, L_ast, F_b, W_ast, x_CB, y_CB, x_CP, y_CP, coeffs);
+            const resM = moment_residual(alpha - eps, rho_air, v, S_ref, L_ast, F_b, W_ast, x_CB, y_CB, x_CP, y_CP, coeffs);
+            const deriv = (resP - resM) / (2 * eps);
+            if (Math.abs(deriv) < 1e-12) break;
+            let step = res / deriv;
+            step = Math.sign(step) * Math.min(Math.abs(step), Math.PI/18);
+            alpha = alpha - step;
+        }
+        return NaN;
+    }
+
+    function solveAtHeight(h, params, customConst, coeffs, prevState) {
+        const { L_ast, V_ast, S_ref, m_enve, m_load, x_CB, y_CB, d_tet, rho_tet, L_seg, E, x_CP, y_CP, v_ref, h_ref, h_ground, alpha_ws } = params;
+        const atmos = ISA_params_custom(h, v_ref, h_ref, alpha_ws, customConst);
+        const { g, rho_air, rho_He } = atmos;
+        const m_He = rho_He * V_ast;
+        const W_ast = (m_enve + m_load + m_He) * g;
+        const F_b = rho_air * V_ast * g;
+        if (F_b < W_ast) return { valid: false };
+        const alpha0 = (prevState && prevState.alpha !== undefined) ? prevState.alpha : 0;
+        const alpha = solve_alpha_newton(alpha0, rho_air, atmos.v, S_ref, L_ast, F_b, W_ast, x_CB, y_CB, x_CP, y_CP, coeffs);
+        if (isNaN(alpha)) return { valid: false };
+        const { F_l, F_d, M_CG } = Aero_params_custom(rho_air, atmos.v, S_ref, L_ast, alpha, coeffs);
+        const T_CP = Math.sqrt(F_d * F_d + (F_l + F_b - W_ast) * (F_l + F_b - W_ast));
+        const theta = Math.atan2(F_d, F_l + F_b - W_ast);
+        if (T_CP < 0 || theta < 0 || theta > Math.PI / 2) return { valid: false };
+        const z_CP = h + y_CP * Math.cos(alpha) + x_CP * Math.sin(alpha);
+        let F_seg = T_CP;
+        let theta_seg = theta;
+        let z_up = z_CP;
+        let x_cum = 0;
+        let L_def_cum = 0;
+        let W_tet_sum = 0;
+        const tet_data = [];
+        const A_tet = Math.PI / 4 * d_tet ** 2;
+        let F_next = 0;
+        for (let seg = 0; seg < 50000; seg++) {
+            const L_def = L_seg + (F_seg * L_seg) / (E * A_tet);
+            const d_def = d_tet * Math.sqrt(L_seg / Math.max(L_def, 1e-6));
+            const m_seg = rho_tet * L_seg * Math.PI / 4 * d_tet ** 2;
+            const z_down = z_up - L_def * Math.cos(theta_seg);
+            if (z_down < h_ground) {
+                const drift = x_cum + x_CP * Math.cos(alpha) - y_CP * Math.sin(alpha);
+                let dM_dv = 0, dM_da = 0;
+                if (isFinite(alpha)) {
+                    const delta_v = Math.max(0.01 * atmos.v, 0.01);
+                    const v1 = atmos.v - delta_v, v2 = atmos.v + delta_v;
+                    const M1 = moment_residual(alpha, rho_air, v1, S_ref, L_ast, F_b, W_ast, x_CB, y_CB, x_CP, y_CP, coeffs);
+                    const M2 = moment_residual(alpha, rho_air, v2, S_ref, L_ast, F_b, W_ast, x_CB, y_CB, x_CP, y_CP, coeffs);
+                    dM_dv = (M2 - M1) / (2 * delta_v);
+                    const delta_alpha = 0.001;
+                    const a1 = alpha - delta_alpha, a2 = alpha + delta_alpha;
+                    const M3 = moment_residual(a1, rho_air, atmos.v, S_ref, L_ast, F_b, W_ast, x_CB, y_CB, x_CP, y_CP, coeffs);
+                    const M4 = moment_residual(a2, rho_air, atmos.v, S_ref, L_ast, F_b, W_ast, x_CB, y_CB, x_CP, y_CP, coeffs);
+                    dM_da = (M4 - M3) / (2 * delta_alpha);
+                }
+                return { valid: true, alpha, T_CP, theta, drift, tet_data, F_b, W_ast, F_l, F_d, M_CG, L_tet_ori: tet_data.length * L_seg, L_tet_def: L_def_cum,
+                         W_tet: W_tet_sum, z_CP, x_cum, F_ground: F_next, atmos, h, v: atmos.v, dM_dv, dM_da };
+            }
+            const z_mid = z_up - 0.5 * L_def * Math.cos(theta_seg);
+            const midAtmos = ISA_params_custom(z_mid, v_ref, h_ref, alpha_ws, customConst);
+            const rho_air_seg = midAtmos.rho_air;
+            const mu_seg = midAtmos.mu;
+            const v_seg = midAtmos.v;
+            const v_n = v_seg * Math.cos(theta_seg);
+            let D_n = 0;
+            if (Math.abs(v_n) > 0.01) {
+                const Re_n = rho_air_seg * Math.abs(v_n) * d_def / mu_seg;
+                let Cd_n;
+                if (Re_n < 30) Cd_n = 1.45 + 8.55 * Math.pow(Re_n, -0.4);
+                else if (Re_n < 100) Cd_n = 1 + 4 * Math.pow(Re_n, -0.5);
+                else if (Re_n < 1000) Cd_n = 2.25 - 0.45 * Math.log10(Re_n);
+                else if (Re_n < 4000) Cd_n = 0.9;
+                else if (Re_n < 15000) Cd_n = 1.05 + 0.054 * Math.log10(Re_n);
+                else if (Re_n < 150000) Cd_n = 1.21;
+                else Cd_n = 0.3;
+                D_n = 0.5 * rho_air_seg * v_n * v_n * L_def * d_def * Cd_n;
+            }
+            const v_t = v_seg * Math.sin(theta_seg);
+            let D_t = 0;
+            if (Math.abs(v_t) > 0.001) {
+                const Re_t = rho_air_seg * Math.abs(v_t) * d_def / mu_seg;
+                const Cd_t = (Re_t < 100.55) ? 1.88 / Math.pow(Re_t, 0.74) : 0.062;
+                D_t = 0.5 * rho_air_seg * v_t * v_t * L_def * d_def * Cd_t;
+            }
+            const F_horiz = F_seg * Math.sin(theta_seg) + D_n * Math.cos(theta_seg) + D_t * Math.sin(theta_seg);
+            const F_vert = F_seg * Math.cos(theta_seg) - m_seg * midAtmos.g - D_n * Math.sin(theta_seg) + D_t * Math.cos(theta_seg);
+            if (F_vert < 0) return { valid: false };
+            tet_data.push({ F_seg, theta_seg, z_down, L_def, stress: F_seg / (Math.PI / 4 * d_def ** 2) / 1e6 });
+            x_cum += L_def * Math.sin(theta_seg);
+            L_def_cum += L_def;
+            W_tet_sum += m_seg * midAtmos.g;
+            F_next = Math.hypot(F_horiz, F_vert);
+            theta_seg = Math.atan2(F_horiz, F_vert);
+            F_seg = F_next;
+            z_up = z_down;
+        }
+        return { valid: false };
+    }
+
+    function getValidInitialSolutions(params, consts, coeffs, alphaMinDeg, alphaMaxDeg) {
+        const h0 = params.h_ground + Math.abs(params.y_CP);
+        const atmos = ISA_params_custom(h0, params.v_ref, params.h_ref, params.alpha_ws, consts);
+        const m_He = atmos.rho_He * params.V_ast;
+        const W_ast = (params.m_enve + params.m_load + m_He) * atmos.g;
+        const F_b = atmos.rho_air * params.V_ast * atmos.g;
+        if (F_b < W_ast) return [];
+        const nSamples = Math.max(21, Math.ceil(alphaMaxDeg - alphaMinDeg) + 1);
+        const candidates = [];
+        for (let i = 0; i <= nSamples; i++) {
+            const alpha_deg = alphaMinDeg + (alphaMaxDeg - alphaMinDeg) * i / (nSamples - 1);
+            const alpha_rad = alpha_deg * Math.PI / 180;
+            const alpha_sol = solve_alpha_newton(alpha_rad, atmos.rho_air, atmos.v, params.S_ref, params.L_ast, F_b, W_ast, params.x_CB, params.y_CB, params.x_CP, params.y_CP, coeffs);
+            if (isNaN(alpha_sol)) continue;
+            const { F_l, F_d } = Aero_params_custom(atmos.rho_air, atmos.v, params.S_ref, params.L_ast, alpha_sol, coeffs);
+            const T = Math.sqrt(F_d * F_d + (F_l + F_b - W_ast) * (F_l + F_b - W_ast));
+            const th = Math.atan2(F_d, F_l + F_b - W_ast);
+            const alpha_sol_deg = alpha_sol * 180 / Math.PI;
+            if (alpha_sol_deg >= alphaMinDeg && alpha_sol_deg <= alphaMaxDeg && T >= 0 && th >= 0 && th <= Math.PI / 2) {
+                candidates.push({ alpha: alpha_sol, T_CP: T, theta: th });
+            }
+        }
+        const unique = [];
+        const tol = 0.01 * Math.PI / 180;
+        for (const s of candidates) {
+            let duplicate = false;
+            for (const u of unique) {
+                if (Math.abs(s.alpha - u.alpha) < tol) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (!duplicate) unique.push(s);
+        }
+        unique.sort((a, b) => a.alpha - b.alpha);
+        return unique;
+    }
+
+    function runTrajectoryFromSolution(params, consts, coeffs, initSolution) {
+        const h0 = params.h_ground + Math.abs(params.y_CP);
+        let startSol = solveAtHeight(h0, params, consts, coeffs, { alpha: initSolution.alpha });
+        if (!startSol.valid) return [];
+        const results = [startSol];
+        const deltaS = (params.step_h && params.step_h > 0) ? params.step_h : Math.pow(params.V_ast, 1 / 3);
+        let h_step = deltaS;
+        let current_h = h0;
+        let lastAlpha = startSol.alpha;
+        for (let iter = 0; iter < 10000; iter++) {
+            if (h_step < 0.001) break;
+            const attempt_h = current_h + h_step;
+            const sol = solveAtHeight(attempt_h, params, consts, coeffs, { alpha: lastAlpha });
+            if (sol.valid) {
+                results.push(sol);
+                current_h = attempt_h;
+                lastAlpha = sol.alpha;
+                if (results.length >= 2) {
+                    const dh = results.at(-1).h - results.at(-2).h;
+                    const dx = results.at(-1).drift - results.at(-2).drift;
+                    const ds = Math.hypot(dx, dh);
+                    const dh_ds = Math.abs(dh / (ds + 1e-6));
+                    h_step = deltaS * dh_ds;
+                }
+            } else {
+                h_step *= 0.5;
+            }
+        }
+        return results;
+    }
+
+    function updateRefArea() {
+        const V = parseFloat(document.getElementById('V_ast').value);
+        if (!isNaN(V)) document.getElementById('S_ref').value = Math.pow(V, 2 / 3).toFixed(3);
+    }
+    function updateCharLength() {
+        const V = parseFloat(document.getElementById('V_ast').value);
+        if (!isNaN(V)) document.getElementById('L_ast').value = Math.pow(V, 1 / 3).toFixed(3);
+    }
+    function updateStepH() {
+        const V = parseFloat(document.getElementById('V_ast').value);
+        if (!isNaN(V)) document.getElementById('step_h').value = Math.pow(V, 1 / 3).toFixed(3);
+    }
+    function bindVolumeEvents() {
+        const volInp = document.getElementById('V_ast');
+        volInp.addEventListener('change', () => { updateRefArea(); updateCharLength(); updateStepH(); });
+    }
+    function initAutoFields() { updateRefArea(); updateCharLength(); updateStepH(); bindVolumeEvents(); }
+
+    function fillStabilityColumn(sol, containerId, isFinal) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const dM_dv = sol.dM_dv !== undefined ? sol.dM_dv : 0;
+        const dM_da = sol.dM_da !== undefined ? sol.dM_da : 0;
+        const dvOk = dM_dv < 0;
+        const daOk = dM_da < 0;
+        let html = '';
+        html += `<p><span class="stability-label">∂M/∂v</span> = ${dM_dv.toFixed(2)} N·s</p>`;
+        if (isFinal) {
+            let allDvOk = true;
+            if (currentResults && currentResults.length > 0) {
+                for (const r of currentResults) {
+                    if (r.dM_dv !== undefined && r.dM_dv >= 0) { allDvOk = false; break; }
+                }
+            } else {
+                allDvOk = dvOk;
+            }
+            html += `<p>Is overall dynamic pressure stable? <span class="${allDvOk ? 'stability-ok' : 'stability-fail'}">${allDvOk ? 'Yes' : 'No'}</span></p>`;
+        } else {
+            html += `<p>Is query point dynamic pressure stable? <span class="${dvOk ? 'stability-ok' : 'stability-fail'}">${dvOk ? 'Yes' : 'No'}</span></p>`;
+        }
+        html += `<div class="stability-divider"></div>`;
+        html += `<p><span class="stability-label">∂M/∂α</span> = ${dM_da.toFixed(2)} N·m/rad</p>`;
+        if (isFinal) {
+            let allDaOk = true;
+            if (currentResults && currentResults.length > 0) {
+                for (const r of currentResults) {
+                    if (r.dM_da !== undefined && r.dM_da >= 0) { allDaOk = false; break; }
+                }
+            } else {
+                allDaOk = daOk;
+            }
+            html += `<p>Is overall angle-of-attack stable? <span class="${allDaOk ? 'stability-ok' : 'stability-fail'}">${allDaOk ? 'Yes' : 'No'}</span></p>`;
+        } else {
+            html += `<p>Is query point angle-of-attack stable? <span class="${daOk ? 'stability-ok' : 'stability-fail'}">${daOk ? 'Yes' : 'No'}</span></p>`;
+        }
+        container.innerHTML = html;
+    }
+
+    function renderAll(results, params) {
+        if (!results.length) return;
+        const final = results.at(-1);
+        fillResultColumns(final, document.getElementById('finalAero'), document.getElementById('finalTether'), document.getElementById('finalAtmos'));
+        fillStabilityColumn(final, 'finalStability', true);
+
+        const A_tet = Math.PI / 4 * params.d_tet ** 2;
+        const maxStress = Math.max(...results.map(r => (r.T_CP / A_tet) * (1 + r.T_CP / (params.E * A_tet)))) / 1e6;
+        let minStress = Infinity;
+        for (const r of results) {
+            if (r.tet_data && r.tet_data.length > 0) {
+                const lastSegStress = r.tet_data[r.tet_data.length - 1].stress;
+                if (lastSegStress < minStress) { minStress = lastSegStress; }
+            }
+        }
+        if (!isFinite(minStress) || minStress <= 0) {
+            minStress = 0.001;
+        }
+        colorStressRange = { min: minStress, max: maxStress };
+        const xNodes = [final.x_cum], zNodes = [final.z_CP];
+        for (const seg of final.tet_data) {
+            const dx = seg.L_def * Math.sin(seg.theta_seg);
+            xNodes.push(xNodes.at(-1) - dx);
+            zNodes.push(zNodes.at(-1) - seg.L_def * Math.cos(seg.theta_seg));
+        }
+        xNodes[xNodes.length - 1] = 0;
+        const ropeTraces = [];
+        for (let i = 0; i < final.tet_data.length; i++) {
+            const seg = final.tet_data[i];
+            const frac = (seg.stress - minStress) / (maxStress - minStress + 1e-3);
+            ropeTraces.push({ x: [xNodes[i], xNodes[i + 1]], y: [zNodes[i], zNodes[i + 1]], mode: 'lines', line: { color: jetColor(frac), width: 4 }, showlegend: false });
+        }
+        const trajTrace = { x: results.map(r => r.drift), y: results.map(r => r.h), mode: 'lines', name: 'Ascent Path', line: { color: '#000000', width: 3 } };
+        const finalPoint = { x: [final.drift], y: [final.h], mode: 'markers', marker: { color: 'red', size: 8 }, name: `End h=${final.h.toFixed(0)} m` };
+        const colorbarTrace = { x: [null], y: [null], mode: 'markers', marker: { colorscale: 'Jet', cmin: minStress, cmax: maxStress, showscale: true, colorbar: { orientation:
+            'v', x: 1, y: 0.5, len: 0.98, thickness: 10, title: { text: 'Stress (MPa)', side: 'right', font: { size: 12 } } } }, showlegend: false, hoverinfo: 'none' };
+        Plotly.newPlot('trajPlot', [trajTrace, ...ropeTraces, finalPoint, colorbarTrace], {
+          margin: { l: 58, r: 0, t: 24, b: 36 },
+          xaxis: { title: { text: 'Drift (m)', font: { size: 12 } }, scaleanchor: "y", scaleratio: 1 }, yaxis: { title: { text: 'Altitude (m)', font: { size: 12 } } },
+          hovermode: 'closest', template: 'plotly_white', legend: { x: 0.95, y: 0.05, xanchor: 'right', yanchor: 'bottom', bgcolor: 'rgba(255,255,255,0.5)', font: { size: 12 } }
+        });
+
+        let cumLen = [final.L_tet_def];
+        const tensNode = [final.T_CP];
+        let cum = 0;
+        for (const s of final.tet_data) {
+            cum += s.L_def;
+            tensNode.push(s.F_seg);
+            cumLen.push(final.L_tet_def - cum);
+        }
+        tensNode.push(final.F_ground);
+        cumLen.push(0);
+        Plotly.newPlot('tensionPlot', [
+          { x: results.map(r => r.L_tet_def), y: results.map(r => r.T_CP), mode: 'lines', name: 'T', line: { color: '#000000', width: 3.5 } },
+          { x: cumLen, y: tensNode, mode: 'lines', name: 'Ti', line: { color: '#dc2626', width: 3.5 } }], {
+          margin: { l: 58, r: 24, t: 24, b: 36 },
+          xaxis: { title: { text: 'Tether length from the ground (m)', font: { size: 12 } } }, yaxis: { title: { text: 'Tension (N)', font: { size: 12 } } },
+          template: 'plotly_white', legend: { x: 0.95, y: 0.05, xanchor: 'right', yanchor: 'bottom', bgcolor: 'rgba(255,255,255,0.5)', font: { size: 12 } }
+        });
+
+        const paramNames = [
+            "Altitude (m)", "Drift (m)", "Buoyancy (N)", "AST Weight (N)", "Alpha (°)", "Lift (N)", "Drag (N)", "Pitch moment (N·m)",
+            "T (N)", "Theta (°)", "Original length (m)", "Deformed length (m)", "Tether weight (N)", "∂M/∂v (N·s)", "∂M/∂α (N·m/rad)"
+        ];
+        const selX = document.getElementById('xParamSelect'), selY = document.getElementById('yParamSelect');
+        selX.innerHTML = '';
+        selY.innerHTML = '';
+        for (let i = 0; i < paramNames.length; i++) {
+            selX.appendChild(new Option(paramNames[i], i));
+            selY.appendChild(new Option(paramNames[i], i));
+        }
+        selX.value = 0;    selY.value = 4;
+        const getData = (idx) => results.map(r => {
+            if (idx === 0) return r.h;
+            if (idx === 1) return r.drift;
+            if (idx === 2) return r.F_b;
+            if (idx === 3) return r.W_ast;
+            if (idx === 4) return r.alpha * 180 / Math.PI;
+            if (idx === 5) return r.F_l;
+            if (idx === 6) return r.F_d;
+            if (idx === 7) return r.M_CG;
+            if (idx === 8) return r.T_CP;
+            if (idx === 9) return r.theta * 180 / Math.PI;
+            if (idx === 10) return r.L_tet_ori;
+            if (idx === 11) return r.L_tet_def;
+            if (idx === 12) return r.W_tet;
+            if (idx === 13) return r.dM_dv !== undefined ? r.dM_dv : 0;
+            if (idx === 14) return r.dM_da !== undefined ? r.dM_da : 0;
+            return 0;
+        });
+        const updateParamPlot = () => {
+          const xIdx = +selX.value, yIdx = +selY.value;
+          const xData = getData(xIdx);
+          const yData = getData(yIdx);
+          Plotly.newPlot('paramCurvePlot', [
+            { x: xData, y: yData, mode: 'lines', name: `${paramNames[xIdx]} - ${paramNames[yIdx]}`, line: { color: '#3b82f6', width: 3.5 }, showlegend: false },
+            { x: [xData[0]], y: [yData[0]], mode: 'markers', name: 'Start', marker: { color: '#10b981', size: 9, symbol: 'circle' } },
+            { x: [xData.at(-1)], y: [yData.at(-1)], mode: 'markers', name: 'End', marker: { color: 'red', size: 9, symbol: 'circle' } }
+          ], {
+            margin: { l: 58, r: 24, t: 24, b: 36 },
+            xaxis: { title: { text: paramNames[xIdx], font: { size: 12 } } }, yaxis: { title: { text: paramNames[yIdx], font: { size: 12 } } },
+            hovermode: 'closest', template: 'plotly_white',
+            legend: { x: 0.75, y: 0.05, xanchor: 'right', yanchor: 'bottom', bgcolor: 'rgba(255,255,255,0.4)', font: { size: 12 } }
+          });
+        };
+        document.getElementById('updateParamPlot').onclick = updateParamPlot;
+        updateParamPlot();
+        document.getElementById('queryAero').innerHTML = '<p>Not queried</p>';
+        document.getElementById('queryTether').innerHTML = '<p>Not queried</p>';
+        document.getElementById('queryAtmos').innerHTML = '<p>Not queried</p>';
+        document.getElementById('queryStability').innerHTML = '<p>Not queried</p>';
+        const minH = params.h_ground + Math.abs(params.y_CP), maxH = results.at(-1).h;
+        document.getElementById('queryLabel').innerHTML = `🔍 Query altitude: (${minH.toFixed(2)}, ${maxH.toFixed(2)}) m`;
+    }
+
+    function findNearestIndex(results, h) {
+        let idx = 0;
+        let minDiff = Infinity;
+        for (let i = 0; i < results.length; i++) {
+            const diff = Math.abs(results[i].h - h);
+            if (diff < minDiff) { minDiff = diff; idx = i; }
+        }
+        return idx;
+    }
+
+    function jetColor(frac) {
+        let r, g, b;
+        frac = Math.min(1, Math.max(0, frac));
+        if (frac < 0.125) { r = 0; g = 0; b = 0.5 + 4 * frac; }
+        else if (frac < 0.375) { r = 0; g = 4 * (frac - 0.125); b = 1; }
+        else if (frac < 0.625) { r = 4 * (frac - 0.375); g = 1; b = 1 - 4 * (frac - 0.375); }
+        else if (frac < 0.875) { r = 1; g = 1 - 4 * (frac - 0.625); b = 0; }
+        else { r = 1 - 4 * (frac - 0.875); g = 0; b = 0; }
+        return `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
+    }
+
+    function fillResultColumns(sol, aeroDiv, tetherDiv, atmosDiv) {
+        if (!sol) return;
+        const a = sol.atmos;
+        aeroDiv.innerHTML = `
+            <p>Altitude: ${sol.h.toFixed(2)} m</p>
+            <p>Drift: ${sol.drift.toFixed(2)} m</p>
+            <p>Alpha: ${(sol.alpha * 180 / Math.PI).toFixed(2)}°</p>
+            <p>Lift: ${sol.F_l.toFixed(2)} N</p>
+            <p>Drag: ${sol.F_d.toFixed(2)} N</p>
+            <p>Pitch moment: ${sol.M_CG.toFixed(2)} N·m</p>
+            <p>Buoyancy: ${sol.F_b.toFixed(2)} N</p>
+            <p>AST Weight: ${sol.W_ast.toFixed(2)} N</p>`;
+        tetherDiv.innerHTML = `
+            <p>Original length: ${sol.L_tet_ori.toFixed(2)} m</p>
+            <p>Deformed length: ${sol.L_tet_def.toFixed(2)} m</p>
+            <p>Confulence point tension: ${sol.T_CP.toFixed(2)} N</p>
+            <p>Theta: ${(sol.theta * 180 / Math.PI).toFixed(2)}°</p>
+            <p>Tether weight: ${sol.W_tet.toFixed(2)} N</p>`;
+        atmosDiv.innerHTML = `
+            <p>Wind speed: ${a.v.toFixed(2)} m/s</p>
+            <p>Temperature: ${a.T.toFixed(2)} K (${(a.T - 273.15).toFixed(2)}°C)</p>
+            <p>Pressure: ${a.P.toFixed(2)} Pa</p>
+            <p>Air density: ${a.rho_air.toFixed(4)} kg/m³</p>
+            <p>Helium density: ${a.rho_He.toFixed(4)} kg/m³</p>
+            <p>Dynamic viscosity: ${a.mu.toExponential(4)} Pa·s</p>
+            <p>Gravity: ${a.g.toFixed(4)} m/s²</p>`;
+    }
+
+    function clearQueryTraces() {
+        const trajDiv = document.getElementById('trajPlot');
+        if (trajDiv?.data) {
+            const idxs = [];
+            trajDiv.data.forEach((tr, i) => tr.name && (tr.name.includes('Query') || tr.name === 'Query Tether') && idxs.push(i));
+            idxs.length && Plotly.deleteTraces(trajDiv, idxs);
+        }
+        const tenDiv = document.getElementById('tensionPlot');
+        if (tenDiv?.data) {
+            const idxs = [];
+            tenDiv.data.forEach((tr, i) => tr.name === 'Query Tether Tension' && idxs.push(i));
+            idxs.length && Plotly.deleteTraces(tenDiv, idxs);
+        }
+    }
+
+    function queryHeightInteractive(h) {
+        if (!currentResults || !currentParams) { alert('Please run simulation first'); return; }
+        const minH = currentParams.h_ground + Math.abs(currentParams.y_CP), maxH = currentResults.at(-1).h;
+        if (h < minH || h > maxH) { alert(`Altitude out of valid range (${minH.toFixed(2)}, ${maxH.toFixed(2)})`); return; }
+        const lastAlpha = currentResults.at(-1).alpha;
+        const sol = solveAtHeight(h, currentParams, currentConst, currentCoeffs, { alpha: lastAlpha });
+        if (!sol.valid) { alert('No valid solution at this altitude'); return; }
+        clearQueryTraces();
+
+        const tet = sol.tet_data;
+        const xN = [sol.x_cum], zN = [sol.z_CP];
+        for (const seg of tet) {
+            const dx = seg.L_def * Math.sin(seg.theta_seg);
+            xN.push(xN.at(-1) - dx);
+            zN.push(zN.at(-1) - seg.L_def * Math.cos(seg.theta_seg));
+        }
+        xN[xN.length - 1] = 0;
+
+        const ropeTraces = [];
+        const { min: minStress, max: maxStress } = colorStressRange;
+        for (let i = 0; i < tet.length; i++) {
+            const seg = tet[i];
+            const frac = (seg.stress - minStress) / (maxStress - minStress + 1e-3);
+            ropeTraces.push({ x: [xN[i], xN[i+1]], y: [zN[i], zN[i+1]], mode: 'lines', line: { color: jetColor(frac), width: 4 }, name: 'Query Tether', showlegend: false });
+        }
+        ropeTraces.length && Plotly.addTraces('trajPlot', ropeTraces);
+        Plotly.addTraces('trajPlot', { x: [sol.drift], y: [sol.h], mode: 'markers', marker: { color: 'blue', size: 8 }, name: `Query h=${h.toFixed(0)} m` });
+
+        const lenList = [sol.L_tet_def], tenList = [sol.T_CP];
+        let cum = 0;
+        for (const s of tet) { cum += s.L_def; tenList.push(s.F_seg); lenList.push(sol.L_tet_def - cum); }
+        tenList.push(sol.F_ground); lenList.push(0);
+        Plotly.addTraces('tensionPlot', { x: lenList, y: tenList, mode: 'lines', name: 'Ti (query)', line: { color: '#2563eb', width: 3.5 } });
+
+        fillResultColumns(sol, document.getElementById('queryAero'), document.getElementById('queryTether'), document.getElementById('queryAtmos'));
+        fillStabilityColumn(sol, 'queryStability', false);
+
+        const trajDiv = document.getElementById('trajPlot');
+        const tenDiv = document.getElementById('tensionPlot');
+        let toDelete = [];
+        trajDiv.data.forEach((tr, i) => {
+            if (tr.name && tr.name.includes('Ascent Path')) { toDelete.push(i); }
+        });
+        if (toDelete.length) { Plotly.deleteTraces(trajDiv, toDelete); }
+        toDelete = [];
+        tenDiv.data.forEach((tr, i) => {
+            if (tr.name && tr.name === 'T') { toDelete.push(i); }
+        });
+        if (toDelete.length) { Plotly.deleteTraces(tenDiv, toDelete); }
+        const idx = findNearestIndex(currentResults, h);
+        const xAll = currentResults.map(r => r.drift);
+        const yAll = currentResults.map(r => r.h);
+        const xBefore = xAll.slice(0, idx + 1);
+        const yBefore = yAll.slice(0, idx + 1);
+        const xAfter = xAll.slice(idx);
+        const yAfter = yAll.slice(idx);
+        if (xBefore.length > 1) { Plotly.addTraces(trajDiv, { x: xBefore, y: yBefore, mode: 'lines', name: 'Ascent Path Q', line: { color: '#000000', width: 3 }, 
+                showlegend: false });
+        }
+        if (xAfter.length > 1) { Plotly.addTraces(trajDiv, { x: xAfter, y: yAfter, mode: 'lines', name: 'Ascent Path P', line: { color: '#000000', width: 3, dash: 'dot' },
+                showlegend: false });
+        }
+        const xTenAll = currentResults.map(r => r.L_tet_def);
+        const yTenAll = currentResults.map(r => r.T_CP);
+        const xTenBefore = xTenAll.slice(0, idx + 1);
+        const yTenBefore = yTenAll.slice(0, idx + 1);
+        const xTenAfter = xTenAll.slice(idx);
+        const yTenAfter = yTenAll.slice(idx);
+        if (xTenBefore.length > 1) { 
+            Plotly.addTraces(tenDiv, { x: xTenBefore, y: yTenBefore, mode: 'lines', name: 'T Q', line: { color: '#000000', width: 3.5 },showlegend: false });
+        }
+        if (xTenAfter.length > 1) { 
+            Plotly.addTraces(tenDiv, { x: xTenAfter, y: yTenAfter, mode: 'lines', name: 'T P', line: { color: '#000000', width: 3.5, dash: 'dot' }, showlegend: false });
+        }
+    }
+
+    document.getElementById('computeBtn').addEventListener('click', () => {
+        showModal('Searching for initial solutions...');
+        try {
+            setTimeout(() => {
+                try {
+                    const params = getParamsFromUI(), consts = getConstFromUI(), coeffs = getAeroCoeffs();
+                    const alphaMinDeg = parseFloat(document.getElementById('alpha_min').value), alphaMaxDeg = parseFloat(document.getElementById('alpha_max').value);
+                    const initSols = getValidInitialSolutions(params, consts, coeffs, alphaMinDeg, alphaMaxDeg);
+                    if (initSols.length === 0) { hideModal(); alert('No valid equilibrium solution found, please adjust aerostat parameters or alpha range'); return; }
+                    availableSolutions = initSols;
+                    const container = document.getElementById('solutionSelectorContainer');
+                    container.innerHTML = '';
+                    for (let idx = 0; idx < initSols.length; idx++) {
+                        const sol = initSols[idx];
+                        const btn = document.createElement('button');
+                        btn.className = 'sol-btn';
+                        const alphaDeg = (sol.alpha * 180 / Math.PI).toFixed(2);
+                        btn.innerText = `Sol ${idx + 1} : α = ${alphaDeg}°`;
+                        if (idx === selectedSolutionIndex) btn.classList.add('active');
+                        btn.onclick = () => {
+                            document.querySelectorAll('.sol-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            selectedSolutionIndex = idx;
+                            showModal(`Computing trajectory for solution ${idx+1}...`);
+                            setTimeout(() => {
+                                try {
+                                    const results = runTrajectoryFromSolution(params, consts, coeffs, sol);
+                                    if (!results.length) { hideModal(); alert('Trajectory computation failed'); return; }
+                                    currentResults = results; currentParams = params; currentConst = consts; currentCoeffs = coeffs;
+                                    renderAll(results, params); hideModal();
+                                } catch (e) { hideModal(); alert('Error: ' + e.message); }
+                            }, 50);
+                        };
+                        container.appendChild(btn);
+                    }
+                    const firstSol = initSols[0];
+                    const results = runTrajectoryFromSolution(params, consts, coeffs, firstSol);
+                    if (results.length) {
+                        currentResults = results; currentParams = params; currentConst = consts; currentCoeffs = coeffs;
+                        renderAll(results, params);
+                    }
+                    hideModal();
+                } catch (e) { hideModal(); alert('Error: ' + e.message); }
+            }, 50);
+        } finally { /* ensure modal hidden if any sync error */ }
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => location.reload());
+    document.getElementById('queryBtn').addEventListener('click', () => {
+        if (isQuerying) return;
+        const h = parseFloat(document.getElementById('queryHeight').value);
+        if (isNaN(h)) { alert('Enter a valid altitude'); return; }
+        isQuerying = true; showModal('Querying altitude...');
+        setTimeout(() => { queryHeightInteractive(h); hideModal(); isQuerying = false; }, 30);
+    });
+
+    const showModal = (msg, id = 'modalOverlay') => {
+        const ov = document.getElementById(id);
+        if (!ov) return;
+        const msgDiv = document.getElementById('modalMessage');
+        if (msgDiv && id === 'modalOverlay') msgDiv.innerText = msg;
+        ov.classList.add('show');
+    };
+    const hideModal = (id = 'modalOverlay') => {
+        const ov = document.getElementById(id);
+        if (ov) ov.classList.remove('show');
+    };
+
+    document.getElementById('helpBtn').onclick = () => document.getElementById('helpModal').classList.add('show');
+    document.getElementById('closeHelpBtn').onclick = () => document.getElementById('helpModal').classList.remove('show');
+
+    if (!localStorage.getItem('hatasim_help_shown')) { setTimeout(() => { document.getElementById('helpModal').classList.add('show');
+            localStorage.setItem('hatasim_help_shown', 'true'); }, 200);
+    }
+
+    initAutoFields();
+    document.getElementById('toggleAtmosBtn').onclick = () => {
+        const div = document.getElementById('atmosCollapse'); div.classList.toggle('show');
+        document.getElementById('toggleAtmosBtn').innerHTML = div.classList.contains('show') ? '🌏 Atmospheric Parameters ▲' : '🌏 Atmospheric Parameters ▼';
+    };
+</script>
+</body>
+</html>
